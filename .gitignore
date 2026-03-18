@@ -1,0 +1,21 @@
+# Generated output (all tool output goes here)
+output/
+
+# Legacy generated reports (pre-reorganization)
+claude_history_report_*.md
+claude_tool_failures_*.md
+daily_failure_reports/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+
+# Environment
+.env
+.venv
+venv/

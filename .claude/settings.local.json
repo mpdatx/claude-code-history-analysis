@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -1 *.py *.md)",
+      "Bash(wc -l *.py *.md)",
+      "Bash(echo \"✅ All files ready in: G:\\\\claude\\\\self-consideration\" \")"
+    ]
+  }
+}
