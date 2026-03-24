@@ -4,11 +4,11 @@ Below is an error analysis from a user's Claude Code session history. Based on t
 
 Rules:
 - Only generate guidelines that address patterns actually present in the data
-- Prioritize by error count — address the biggest problems first
+- Prioritize by error count -- address the biggest problems first
 - Each guideline should have: a short rule, why it matters (referencing the data), and how to apply it
 - Use concrete examples (e.g., "use `git -C dir status` instead of `cd dir && git status`")
 - Format as markdown sections ready to paste into CLAUDE.md
-- If a category has zero errors, skip it — don't generate guidelines for non-problems
+- If a category has zero errors, skip it -- don't generate guidelines for non-problems
 - Keep guidelines actionable and specific, not generic advice
 - If the data shows permission denials, suggest specific settings.json entries
 - If the data shows suboptimal tool usage, list the exact replacements (Bash ls -> Glob, etc.)
