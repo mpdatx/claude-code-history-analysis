@@ -286,8 +286,8 @@ def _offer_open_in_browser(path: Path):
     if _interactive_mode:
         from InquirerPy import inquirer
         if inquirer.confirm(message="Open in browser?", default=True).execute():
-            import subprocess
-            subprocess.Popen(["start", "", str(path)], shell=True)
+            import webbrowser
+            webbrowser.open(path.as_uri())
 
 
 @app.command()
