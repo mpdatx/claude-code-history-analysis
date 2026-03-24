@@ -455,5 +455,35 @@ def catalog(
         db.close()
 
 
+@app.command()
+def report(
+    output: Optional[Path] = typer.Option(None, help="Save report to file instead of stdout"),
+    prompt: bool = typer.Option(True, "--prompt/--no-prompt", help="Wrap data in guideline generation prompt"),
+):
+    """Generate error analysis for LLM-based guideline generation."""
+    from tools.report import generate_report
+
+    data = generate_report(_resolved_dir)
+
+    if prompt:
+        prompt_file = REPO_ROOT / "prompts" / "generate_guidelines.txt"
+        if prompt_file.exists():
+            template = prompt_file.read_text(encoding="utf-8")
+            text = template.replace("{data}", data)
+        else:
+            print(f"Warning: prompt template not found at {prompt_file}", file=sys.stderr)
+            text = data
+    else:
+        text = data
+
+    if output:
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        output.write_text(text, encoding="utf-8")
+        print(f"Report saved to: {output.resolve()}")
+    else:
+        sys.stdout.buffer.write(text.encode("utf-8"))
+        sys.stdout.buffer.write(b"\n")
+
+
 if __name__ == "__main__":
     app()
