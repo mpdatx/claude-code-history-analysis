@@ -253,7 +253,8 @@ def timeline(
 
     print(f"Project: {project_dir.name}")
 
-    jsonl_files = sorted(project_dir.glob("*.jsonl"))
+    from claude_history.parsing import find_history_files
+    jsonl_files = sorted(find_history_files(project_dir))
     if not jsonl_files:
         typer.echo("No JSONL session files found.", err=True)
         raise typer.Exit(1)

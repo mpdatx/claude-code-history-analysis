@@ -188,9 +188,10 @@ class CatalogDB:
             session_id = file_path.stem
             current_ids.add(session_id)
 
-            file_size = file_path.stat().st_size
+            file_stat = file_path.stat()
+            file_size = file_stat.st_size
             file_mtime = datetime.fromtimestamp(
-                file_path.stat().st_mtime, tz=timezone.utc
+                file_stat.st_mtime, tz=timezone.utc
             ).isoformat()
 
             # Check if already up to date
@@ -469,6 +470,9 @@ class CatalogDB:
                 return f"{n / 1_000:.1f} KB"
             return f"{n} B"
 
+        from claude_history.html_theme import get_base_css
+        base_css = get_base_css()
+
         rows_html = ""
         for p in projects:
             messages = (p.get("user_messages", 0) or 0) + (p.get("assistant_messages", 0) or 0)
@@ -496,52 +500,11 @@ class CatalogDB:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Claude History Catalog</title>
 <style>
-  :root {{
-    --bg: #0d1117;
-    --surface: #161b22;
-    --border: #30363d;
-    --text: #c9d1d9;
-    --text-muted: #8b949e;
-    --accent: #58a6ff;
-    --error: #f85149;
-    --success: #3fb950;
-  }}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
-    font-size: 14px;
-    padding: 24px;
-  }}
+{base_css}
+  body {{ font-size: 14px; padding: 24px; }}
   h1 {{ color: var(--accent); margin-bottom: 24px; font-size: 1.6em; }}
-  .stats {{
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
-  }}
-  .stat-card {{
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 24px;
-    min-width: 140px;
-    text-align: center;
-  }}
-  .stat-card .value {{
-    font-size: 1.8em;
-    font-weight: bold;
-    color: var(--accent);
-  }}
-  .stat-card .label {{
-    color: var(--text-muted);
-    font-size: 0.85em;
-    margin-top: 4px;
-  }}
-  .controls {{
-    margin-bottom: 16px;
-  }}
+  .stats {{ display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }}
+  .controls {{ margin-bottom: 16px; }}
   #filter {{
     background: var(--surface);
     border: 1px solid var(--border);
@@ -551,45 +514,19 @@ class CatalogDB:
     font-size: 14px;
     width: 280px;
   }}
-  #filter::placeholder {{ color: var(--text-muted); }}
-  table {{
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--surface);
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-  }}
-  thead {{ background: #1c2128; }}
-  th {{
-    padding: 10px 14px;
-    text-align: left;
-    color: var(--text-muted);
-    font-weight: 600;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-  }}
+  #filter::placeholder {{ color: var(--text2); }}
+  th {{ cursor: pointer; user-select: none; white-space: nowrap; }}
   th:hover {{ color: var(--accent); }}
   th.sorted-asc::after {{ content: ' ▲'; }}
   th.sorted-desc::after {{ content: ' ▼'; }}
-  td {{
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-    font-size: 13px;
-  }}
   td:nth-child(8) {{
     max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--text-muted);
+    color: var(--text2);
     font-size: 12px;
   }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: rgba(88,166,255,0.05); }}
   .hidden {{ display: none; }}
 </style>
 </head>

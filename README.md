@@ -1,109 +1,81 @@
-# Claude Code History Analysis & Guidelines
+# Claude Code History Analysis
 
-Analysis tools and evidence-based guidelines to improve Claude Code sessions by reducing tool errors and optimizing workflows.
+Tools for analyzing Claude Code session histories to identify tool failure patterns and generate evidence-based guidelines.
 
-## Overview
+## Quick Start
 
-This project analyzes Claude Code session histories to identify patterns in tool failures, permission issues, and suboptimal tool usage across hundreds of sessions. The analysis produces:
+```bash
+# Install dependencies
+pip install typer InquirerPy
 
-- **4 Python analysis tools** that scan history files and generate reports
-- **14 evidence-based guidelines** to prevent 94% of identified errors
-- **Windows compatibility guide** for cross-platform usage
-- **Specialized guides** for recurring error patterns
+# Interactive mode
+python tools/cli.py -i
+
+# List available projects
+python tools/cli.py --list
+
+# Or use module invocation
+python -m claude_history --help
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `timeline <project>` | Interactive HTML timeline for a project |
+| `analyze` | Broad pattern analysis — errors, permissions, retries, suboptimal usage |
+| `failures` | Deep tool failure analysis with root cause classification |
+| `daily` | Daily failure reports by project |
+| `catalog` | Project catalog with cached metadata and activity tracking |
+
+All commands support `--html` for HTML output and `--project` for single-project filtering.
+
+### Examples
+
+```bash
+# Generate timeline for a project
+python tools/cli.py timeline my-project
+
+# Analyze failures across all projects, output as HTML
+python tools/cli.py failures --html
+
+# Daily report for a specific date
+python tools/cli.py daily --date 2026-03-17
+
+# Project catalog (auto-scans on first run)
+python tools/cli.py catalog
+
+# Filter to one project
+python tools/cli.py --project my-project analyze
+```
 
 ## Project Structure
 
 ```
-claude_history/             # Shared library package
-    discovery.py            # Project discovery (HISTORY_ROOT, find_project, list_projects)
-    parsing.py              # JSONL iteration, history file discovery, tool_id resolution
-    errors.py               # ErrorCategory enum, classify_error()
-    filters.py              # System tag stripping, injected text detection
-    timestamps.py           # parse_timestamp(), format_duration()
+claude_history/          # Library package
+    catalog.py           # SQLite-backed project catalog
+    discovery.py         # Project directory discovery
+    errors.py            # Error classification (9 categories)
+    filters.py           # System tag stripping, text filtering
+    html_theme.py        # Shared CSS theme for HTML reports
+    parsing.py           # JSONL parsing, session event iteration
+    timestamps.py        # Timestamp parsing and formatting
 
-tools/                      # CLI entry points
-    timeline.py             # Interactive HTML timeline visualization
-    analyze_history.py      # Broad pattern analysis (errors, permissions, retries)
-    analyze_failures.py     # Deep error analysis with root cause classification
-    daily_reports.py        # Daily markdown reports of failures by project
+tools/                   # Analysis tools (imported by CLI)
+    cli.py               # Unified typer CLI with interactive mode
+    analyze_history.py   # Pattern analysis (D1-D4)
+    analyze_failures.py  # Deep error analysis
+    daily_reports.py     # Daily failure reports
+    timeline.py          # HTML timeline generator
 
-docs/
-    guidelines/             # Content meant to be copied into CLAUDE.md
-    guides/                 # Reference documentation
-    ANALYSIS_TOOLS_README.md
-    DAILY_FAILURE_REPORTS_README.md
-    INDEX.md
-
-output/                     # All generated output (gitignored)
+docs/                    # Documentation
+    guidelines/          # CLAUDE.md directives
+    guides/              # Platform and tool guides
 ```
 
-## Quick Start
+## Guidelines
 
-### For Users
-
-1. **Quick Guidelines (6 rules, 10 min)**: See `docs/guidelines/CLAUDE_MD_QUICK_START_MARKDOWN.md`
-2. **Full Guidelines (14 rules, 38 min)**: See `docs/guidelines/CLAUDE_MD_FULL_GUIDELINES_MARKDOWN.md`
-3. **Windows Users**: Read `docs/guides/WINDOWS_COMPATIBILITY_GUIDE.md` first
-
-Copy your preferred guideline set into your `CLAUDE.md` file.
-
-### For Analysis
-
-```bash
-# Generate interactive project timeline
-python tools/timeline.py self-consideration
-
-# List available projects
-python tools/timeline.py --list
-
-# Generate broad pattern analysis
-python tools/analyze_history.py
-
-# Generate deep failure analysis
-python tools/analyze_failures.py
-
-# Generate daily failure reports
-python tools/daily_reports.py --date 2026-03-17
-```
-
-All output is written to `output/`.
-
-See `docs/ANALYSIS_TOOLS_README.md` for full documentation.
-
-## Key Findings
-
-**Total Errors Analyzed**: 1,310 across 688 sessions
-**Preventable Errors**: 2,867 (94% with all guidelines)
-
-### Top Error Categories
-- Bash exit codes (740 errors) - mostly unhandled pipeline failures
-- Edit/Write/Read failures (329 errors) - file not read before editing, parameter type mismatches
-- Non-existent tool calls (85 errors) - pkill on Windows, deprecated skills, missing commands
-- Permission denials (502 errors) - lack of settings.json allowlist
-- Suboptimal tool usage (1,440 patterns) - Bash ls/grep/find instead of dedicated tools
-
-### Top Improvements
-| Category | Before | After | Reduction |
-|----------|--------|-------|-----------|
-| Bash errors | 740 | ~295 | 60% |
-| Edit errors | 157 | ~8 | 95% |
-| Non-existent calls | 85 | ~10 | 88% |
-| Permission denials | 502 | ~50 | 90% |
-| Suboptimal usage | 1,440 | 0 | 100% |
-
-## Data Sources
-
-Analysis based on:
-- 688+ Claude Code sessions
-- 348MB of JSONL history files
-- 1,310 tool call errors
-- 26 daily failure reports
-- 23 unique tools analyzed
-
-## Platform Support
-
-- Linux/Mac: All guidelines and tools fully supported
-- Windows: See `docs/guides/WINDOWS_COMPATIBILITY_GUIDE.md` for command equivalents
+The `docs/guidelines/GUIDELINES.md` file contains 14 evidence-based directives for CLAUDE.md that address the most common tool failure patterns. See `docs/INDEX.md` for a full documentation index.
 
 ## License
 

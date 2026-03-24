@@ -19,10 +19,6 @@ from claude_history.filters import extract_user_text, is_injected_text, strip_sy
 from claude_history.timestamps import parse_timestamp, format_duration
 from claude_history.parsing import iter_jsonl
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_DIR = REPO_ROOT / "output"
-
-
 def parse_session(jsonl_path: Path) -> dict:
     """Parse a single JSONL session file and extract timeline data.
 
@@ -114,21 +110,6 @@ def parse_session(jsonl_path: Path) -> dict:
                         })
 
     return session
-
-
-def _snippet(text, max_len=120) -> str:
-    """Get a short snippet of text."""
-    if isinstance(text, list):
-        text = " ".join(
-            item.get("text", "") if isinstance(item, dict) else str(item)
-            for item in text
-        )
-    if not isinstance(text, str):
-        text = str(text)
-    text = text.replace("\n", " ").strip()
-    if len(text) > max_len:
-        return text[:max_len] + "..."
-    return text
 
 
 def generate_html(project_name: str, sessions: list) -> str:

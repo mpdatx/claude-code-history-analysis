@@ -26,9 +26,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from claude_history.errors import classify_error
 from claude_history.parsing import find_history_files, iter_session_events
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_DIR = REPO_ROOT / "output"
-
 PERMISSION_PATTERNS = re.compile(
     r"permission|denied|not allowed|allowlist|requires approval", re.I
 )
@@ -433,6 +430,9 @@ def generate_html_report(results: AnalysisResults, output_file: Path) -> None:
         if d4_rows else "<p class='empty'>No suboptimal tool usage patterns detected.</p>"
     )
 
+    from claude_history.html_theme import get_base_css
+    base_css = get_base_css()
+
     date_str = datetime.now().strftime("%Y-%m-%d")
     projects_count = len(results.projects_scanned)
     size_str = f"{results.total_size_mb:.0f} MB"
@@ -444,27 +444,12 @@ def generate_html_report(results: AnalysisResults, output_file: Path) -> None:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Claude History Analysis</title>
 <style>
-  :root {{
-    --bg: #0d1117; --surface: #161b22; --surface2: #1c2129; --border: #30363d;
-    --text: #e6edf3; --text2: #8b949e; --accent: #58a6ff; --accent2: #388bfd;
-    --green: #3fb950; --red: #f85149; --orange: #d29922; --purple: #bc8cff;
-  }}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{
-    background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
-    font-size: 14px; padding: 24px;
-  }}
+{base_css}
+  body {{ font-size: 14px; padding: 24px; }}
   h1 {{ color: var(--accent); margin-bottom: 8px; font-size: 1.6em; }}
   .subtitle {{ color: var(--text2); margin-bottom: 24px; font-size: 0.9em; }}
   h2 {{ color: var(--accent); margin: 32px 0 12px; font-size: 1.2em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }}
   .stats {{ display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }}
-  .stat-card {{
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 16px 24px; min-width: 140px; text-align: center;
-  }}
-  .stat-card .value {{ font-size: 1.8em; font-weight: bold; color: var(--accent); }}
-  .stat-card .label {{ color: var(--text2); font-size: 0.85em; margin-top: 4px; }}
   .controls {{ margin-bottom: 16px; }}
   #filter {{
     background: var(--surface); border: 1px solid var(--border);
@@ -472,40 +457,11 @@ def generate_html_report(results: AnalysisResults, output_file: Path) -> None:
     font-size: 14px; width: 300px;
   }}
   #filter::placeholder {{ color: var(--text2); }}
-  table {{
-    width: 100%; border-collapse: collapse; background: var(--surface);
-    border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
-    margin-bottom: 16px;
-  }}
-  thead {{ background: var(--surface2); }}
-  th {{
-    padding: 10px 14px; text-align: left; color: var(--text2);
-    font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap;
-  }}
-  td {{
-    padding: 8px 14px; border-bottom: 1px solid var(--border);
-    color: var(--text); font-size: 13px;
-  }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: rgba(88,166,255,0.05); }}
   code {{
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 3px; padding: 1px 5px; font-size: 12px;
     color: var(--orange); word-break: break-all;
   }}
-  details {{
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; margin-bottom: 10px; overflow: hidden;
-  }}
-  details > summary {{
-    padding: 10px 16px; cursor: pointer; color: var(--text);
-    font-weight: 600; user-select: none; list-style: none;
-    display: flex; align-items: center; gap: 8px;
-  }}
-  details > summary::-webkit-details-marker {{ display: none; }}
-  details > summary::before {{ content: '▶'; color: var(--text2); font-size: 0.7em; }}
-  details[open] > summary::before {{ content: '▼'; }}
-  details > table {{ border-radius: 0; border: none; border-top: 1px solid var(--border); margin-bottom: 0; }}
   .badge {{
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 12px; padding: 2px 8px; font-size: 0.8em;

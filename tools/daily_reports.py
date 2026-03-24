@@ -21,10 +21,6 @@ from claude_history.errors import classify_error
 from claude_history.parsing import find_history_files, iter_session_events
 from claude_history.timestamps import parse_timestamp
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_DIR = REPO_ROOT / "output"
-
-
 @dataclass
 class FailedCall:
     timestamp: str
@@ -242,6 +238,9 @@ def generate_html_report(date: str, failures: List[FailedCall], output_file: Pat
 </details>
 """
 
+    from claude_history.html_theme import get_base_css
+    base_css = get_base_css()
+
     gen_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     html = f"""<!DOCTYPE html>
@@ -251,62 +250,13 @@ def generate_html_report(date: str, failures: List[FailedCall], output_file: Pat
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Failed Tool Calls &mdash; {html_mod.escape(date)}</title>
 <style>
-  :root {{
-    --bg: #0d1117; --surface: #161b22; --surface2: #1c2129; --border: #30363d;
-    --text: #e6edf3; --text2: #8b949e; --accent: #58a6ff; --accent2: #388bfd;
-    --green: #3fb950; --red: #f85149; --orange: #d29922; --purple: #bc8cff;
-  }}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{
-    background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
-    font-size: 14px; padding: 24px;
-  }}
+{base_css}
+  body {{ font-size: 14px; padding: 24px; }}
   h1 {{ color: var(--accent); margin-bottom: 8px; font-size: 1.6em; }}
   .subtitle {{ color: var(--text2); margin-bottom: 24px; font-size: 0.9em; }}
   h2 {{ color: var(--accent); margin: 32px 0 12px; font-size: 1.2em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }}
   h4 {{ color: var(--text2); margin: 12px 0 6px; font-size: 0.95em; }}
   .stats {{ display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }}
-  .stat-card {{
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 16px 24px; min-width: 140px; text-align: center;
-  }}
-  .stat-card .value {{ font-size: 1.8em; font-weight: bold; color: var(--accent); }}
-  .stat-card .label {{ color: var(--text2); font-size: 0.85em; margin-top: 4px; }}
-  table {{
-    width: 100%; border-collapse: collapse; background: var(--surface);
-    border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
-    margin-bottom: 16px;
-  }}
-  thead {{ background: var(--surface2); }}
-  th {{
-    padding: 10px 14px; text-align: left; color: var(--text2);
-    font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap;
-  }}
-  td {{
-    padding: 8px 14px; border-bottom: 1px solid var(--border);
-    color: var(--text); font-size: 13px;
-  }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: rgba(88,166,255,0.05); }}
-  pre {{
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 6px; padding: 12px; font-size: 12px; color: var(--text2);
-    overflow-x: auto; white-space: pre-wrap; word-break: break-word;
-    margin-bottom: 12px;
-  }}
-  details {{
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; margin-bottom: 10px; overflow: hidden;
-  }}
-  details > summary {{
-    padding: 10px 16px; cursor: pointer; color: var(--text);
-    font-weight: 600; user-select: none; list-style: none;
-    display: flex; align-items: center; gap: 8px;
-  }}
-  details > summary::-webkit-details-marker {{ display: none; }}
-  details > summary::before {{ content: '\u25b6'; color: var(--text2); font-size: 0.7em; }}
-  details[open] > summary::before {{ content: '\u25bc'; }}
   .detail-body {{ padding: 12px 16px; }}
   .detail-body > table {{ border-radius: 0; }}
   .badge {{
@@ -315,7 +265,6 @@ def generate_html_report(date: str, failures: List[FailedCall], output_file: Pat
     color: var(--text2); font-weight: normal;
   }}
   .sample-header {{ color: var(--text2); font-size: 0.85em; margin-bottom: 4px; }}
-  /* Bar chart */
   .bar-row {{ display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }}
   .bar-label {{ width: 180px; color: var(--text2); font-size: 13px; flex-shrink: 0; }}
   .bar-track {{ flex: 1; background: var(--surface2); border-radius: 4px; height: 16px; border: 1px solid var(--border); }}

@@ -52,7 +52,7 @@ def classify_error(error_text: str) -> Tuple[ErrorCategory, Optional[int]]:
         return ErrorCategory.NOT_FOUND, None
 
     # Network
-    if "network" in error_lower or "request failed" in error_lower or "http" in error_lower:
+    if "network" in error_lower or "request failed" in error_lower or "http error" in error_lower or "connection refused" in error_lower or "connection reset" in error_lower:
         return ErrorCategory.NETWORK, None
 
     # Sibling error
