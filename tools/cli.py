@@ -29,6 +29,7 @@ app = typer.Typer(help="Claude Code history analysis tools.")
 _resolved_dir: Optional[Path] = None
 _single_project: bool = False
 _interactive_mode: bool = False
+_html_output: bool = True
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = REPO_ROOT / "output"
@@ -206,9 +207,11 @@ def main(
     projects_dir: Optional[Path] = typer.Option(None, help="Override projects directory"),
     list_projects_flag: bool = typer.Option(False, "--list", help="List available projects and exit"),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive menu mode"),
+    html: bool = typer.Option(True, "--html/--no-html", help="HTML output (default) or markdown/terminal"),
 ):
     """Claude Code history analysis tools."""
-    global _resolved_dir, _single_project, _interactive_mode
+    global _resolved_dir, _single_project, _interactive_mode, _html_output
+    _html_output = html
     if list_projects_flag:
         list_projects()
         raise typer.Exit()
@@ -290,7 +293,6 @@ def _offer_open_in_browser(path: Path):
 @app.command()
 def analyze(
     output: Optional[Path] = typer.Option(None, help="Output file path"),
-    html: bool = typer.Option(False, "--html", help="Generate HTML report"),
 ):
     """Broad pattern analysis (errors, permissions, retries, suboptimal usage)."""
     from datetime import datetime
@@ -311,7 +313,7 @@ def analyze(
     for line in summary:
         print(line)
 
-    if html:
+    if _html_output:
         output_file = output or (OUTPUT_DIR / f"claude_history_report_{datetime.now().strftime('%Y-%m-%d')}.html")
         generate_html_report(results, output_file)
         resolved = output_file.resolve()
@@ -326,7 +328,6 @@ def analyze(
 @app.command()
 def failures(
     output: Optional[Path] = typer.Option(None, help="Output file path"),
-    html: bool = typer.Option(False, "--html", help="Generate HTML report"),
 ):
     """Deep analysis of tool call failures."""
     from datetime import datetime
@@ -346,7 +347,7 @@ def failures(
     stats = compute_tool_stats(errors)
     print(f"Analyzed {len(stats)} unique tools", file=sys.stderr)
 
-    if html:
+    if _html_output:
         output_file = output or (OUTPUT_DIR / f"claude_tool_failures_{datetime.now().strftime('%Y-%m-%d')}.html")
         generate_html_report(errors, stats, output_file)
         resolved = output_file.resolve()
@@ -363,7 +364,6 @@ def failures(
 def daily(
     date: Optional[str] = typer.Option(None, help="Date (YYYY-MM-DD) or 'all'"),
     output_dir: Optional[Path] = typer.Option(None, help="Output directory"),
-    html: bool = typer.Option(False, "--html", help="Generate HTML reports"),
 ):
     """Generate daily failure reports."""
     from tools.daily_reports import scan_history_files, generate_daily_report, generate_html_report
@@ -395,7 +395,7 @@ def daily(
     last_file = None
     for d in dates_to_report:
         f = failures_by_date[d]
-        if html:
+        if _html_output:
             output_file = out_dir / f"failures_{d}.html"
             generate_html_report(d, f, output_file)
         else:
@@ -416,7 +416,6 @@ def catalog(
     scan: bool = typer.Option(False, "--scan", help="Rescan projects before displaying"),
     recent: Optional[int] = typer.Option(None, "--recent", help="Only show projects active in last N days"),
     sort: str = typer.Option("last_active", "--sort", help="Sort by: last_active, sessions, errors, name"),
-    html: bool = typer.Option(False, "--html", help="Generate HTML dashboard"),
     db_path: Optional[Path] = typer.Option(None, "--db-path", help="Override catalog database path"),
 ):
     """Project catalog with cached metadata and activity tracking."""
@@ -443,7 +442,7 @@ def catalog(
             project_name=project_filter,
         )
 
-        if html:
+        if _html_output:
             html_content = CatalogDB.generate_html(projects)
             html_file = OUTPUT_DIR / "catalog.html"
             html_file.write_text(html_content, encoding="utf-8")
