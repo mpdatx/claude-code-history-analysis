@@ -3,14 +3,23 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional
 
 
-def find_history_files(project_dir: Path) -> list[Path]:
-    """Find all session JSONL files in a project directory, excluding history.jsonl."""
+def find_history_files(project_dir: Path, recent_days: Optional[int] = None) -> list[Path]:
+    """Find all session JSONL files in a project directory, excluding history.jsonl.
+
+    If recent_days is set, only return files modified within the last N days
+    (uses file mtime as a fast pre-filter).
+    """
     files = list(project_dir.glob("**/[0-9a-f]*-[0-9a-f]*.jsonl"))
-    return [f for f in files if f.name != "history.jsonl"]
+    files = [f for f in files if f.name != "history.jsonl"]
+    if recent_days is not None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=recent_days)).timestamp()
+        files = [f for f in files if f.stat().st_mtime >= cutoff]
+    return files
 
 
 def iter_jsonl(path: Path) -> Iterator[dict]:

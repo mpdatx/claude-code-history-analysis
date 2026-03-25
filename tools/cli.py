@@ -30,6 +30,7 @@ _resolved_dir: Optional[Path] = None
 _single_project: bool = False
 _interactive_mode: bool = False
 _html_output: bool = True
+_recent_days: Optional[int] = None
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = REPO_ROOT / "output"
@@ -109,7 +110,7 @@ def _prompt_for_param(name: str, param: click.Parameter):
 
 # Params to skip in interactive mode: output paths have good defaults,
 # and project_name is handled by the interactive project picker.
-_INTERACTIVE_SKIP_PARAMS = {"help", "output", "output_dir", "project_name", "db_path", "scan", "html"}
+_INTERACTIVE_SKIP_PARAMS = {"help", "output", "output_dir", "project_name", "db_path", "scan", "html", "recent"}
 
 
 def run_interactive(ctx: typer.Context):
@@ -208,10 +209,12 @@ def main(
     list_projects_flag: bool = typer.Option(False, "--list", help="List available projects and exit"),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive menu mode"),
     html: bool = typer.Option(True, "--html/--no-html", help="HTML output (default) or markdown/terminal"),
+    recent: Optional[int] = typer.Option(None, "--recent", help="Only include sessions from the last N days"),
 ):
     """Claude Code history analysis tools."""
-    global _resolved_dir, _single_project, _interactive_mode, _html_output
+    global _resolved_dir, _single_project, _interactive_mode, _html_output, _recent_days
     _html_output = html
+    _recent_days = recent
     if list_projects_flag:
         list_projects()
         raise typer.Exit()
@@ -257,7 +260,7 @@ def timeline(
     print(f"Project: {project_dir.name}")
 
     from claude_history.parsing import find_history_files
-    jsonl_files = sorted(find_history_files(project_dir))
+    jsonl_files = sorted(find_history_files(project_dir, recent_days=_recent_days))
     if not jsonl_files:
         typer.echo("No JSONL session files found.", err=True)
         raise typer.Exit(1)
@@ -307,7 +310,7 @@ def analyze(
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     results = AnalysisResults()
-    scan_history(_resolved_dir, results)
+    scan_history(_resolved_dir, results, recent_days=_recent_days)
 
     summary = generate_summary_table(results)
     for line in summary:
@@ -341,7 +344,7 @@ def failures(
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Scanning history files...", file=sys.stderr)
-    errors = scan_history_files(_resolved_dir)
+    errors = scan_history_files(_resolved_dir, recent_days=_recent_days)
     print(f"Found {len(errors)} tool errors", file=sys.stderr)
 
     stats = compute_tool_stats(errors)
@@ -373,7 +376,7 @@ def daily(
     print(f"Reports directory: {out_dir}", file=sys.stderr)
 
     print("Scanning history files...", file=sys.stderr)
-    failures_by_date = scan_history_files(_resolved_dir)
+    failures_by_date = scan_history_files(_resolved_dir, recent_days=_recent_days)
 
     if not failures_by_date:
         print("No failures found", file=sys.stderr)
@@ -414,7 +417,6 @@ def daily(
 @app.command()
 def catalog(
     scan: bool = typer.Option(False, "--scan", help="Rescan projects before displaying"),
-    recent: Optional[int] = typer.Option(None, "--recent", help="Only show projects active in last N days"),
     sort: str = typer.Option("last_active", "--sort", help="Sort by: last_active, sessions, errors, name"),
     db_path: Optional[Path] = typer.Option(None, "--db-path", help="Override catalog database path"),
 ):
@@ -437,7 +439,7 @@ def catalog(
         # Query
         project_filter = _resolved_dir.name if _single_project else None
         projects = db.get_projects(
-            recent_days=recent,
+            recent_days=_recent_days,
             sort_by=sort,
             project_name=project_filter,
         )
@@ -463,7 +465,7 @@ def report(
     """Generate error analysis for LLM-based guideline generation."""
     from tools.report import generate_report
 
-    data = generate_report(_resolved_dir)
+    data = generate_report(_resolved_dir, recent_days=_recent_days)
 
     if prompt:
         prompt_file = REPO_ROOT / "prompts" / "generate_guidelines.txt"

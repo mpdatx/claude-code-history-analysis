@@ -45,8 +45,8 @@ class ToolStats:
     error_samples: List[ToolError] = field(default_factory=list)
 
 
-def scan_history_files(projects_dir: Path) -> List[ToolError]:
-    history_files = find_history_files(projects_dir)
+def scan_history_files(projects_dir: Path, recent_days=None) -> List[ToolError]:
+    history_files = find_history_files(projects_dir, recent_days=recent_days)
     if not history_files:
         print(f"Error: no history files found in {projects_dir}", file=sys.stderr)
         return []

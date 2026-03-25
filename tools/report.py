@@ -10,9 +10,9 @@ from claude_history.errors import classify_error
 from claude_history.parsing import find_history_files, iter_session_events
 
 
-def generate_report(projects_dir: Path) -> str:
+def generate_report(projects_dir: Path, recent_days=None) -> str:
     """Scan history files and return a compact text report of error patterns."""
-    history_files = find_history_files(projects_dir)
+    history_files = find_history_files(projects_dir, recent_days=recent_days)
     if not history_files:
         return "No history files found."
 

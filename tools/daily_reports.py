@@ -33,8 +33,8 @@ class FailedCall:
     error_type: str
 
 
-def scan_history_files(projects_dir: Path) -> Dict[str, List[FailedCall]]:
-    history_files = find_history_files(projects_dir)
+def scan_history_files(projects_dir: Path, recent_days=None) -> Dict[str, List[FailedCall]]:
+    history_files = find_history_files(projects_dir, recent_days=recent_days)
     if not history_files:
         print(f"Error: no history files found in {projects_dir}", file=sys.stderr)
         return {}

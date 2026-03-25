@@ -156,8 +156,8 @@ def parse_session_file(file_path: Path, results: AnalysisResults) -> None:
         print(f"Error processing {file_path}: {e}", file=sys.stderr)
 
 
-def scan_history(projects_dir: Path, results: AnalysisResults) -> None:
-    history_files = find_history_files(projects_dir)
+def scan_history(projects_dir: Path, results: AnalysisResults, recent_days=None) -> None:
+    history_files = find_history_files(projects_dir, recent_days=recent_days)
     print(f"Scanning {len(history_files)} session files...", file=sys.stderr)
 
     for i, file_path in enumerate(history_files, 1):
