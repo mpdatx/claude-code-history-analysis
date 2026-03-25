@@ -481,7 +481,7 @@ def report(
     if output:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         output.write_text(text, encoding="utf-8")
-        print(f"Report saved to: {output.resolve()}")
+        print(f"Report saved to: {output.resolve()}", file=sys.stderr)
     else:
         sys.stdout.buffer.write(text.encode("utf-8"))
         sys.stdout.buffer.write(b"\n")
