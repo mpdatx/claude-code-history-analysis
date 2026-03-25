@@ -1,8 +1,11 @@
 """Generate a compact error analysis report for LLM-based guideline generation."""
 
+import re
 import sys
 from pathlib import Path
 from collections import defaultdict
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 from typing import List
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -65,9 +68,8 @@ def generate_report(projects_dir: Path, recent_days=None) -> str:
                                     errors_by_tool_category[tool_name][cat.value] += 1
 
                                     if len(error_snippets_by_tool[tool_name]) < 3:
-                                        error_snippets_by_tool[tool_name].append(
-                                            error_text[:150].replace("\n", " ")
-                                        )
+                                        snippet = _ANSI_RE.sub("", error_text[:150]).replace("\n", " ")
+                                        error_snippets_by_tool[tool_name].append(snippet)
 
                                 if PERMISSION_PAT.search(str(item.get("content", ""))):
                                     perm_denials_by_tool[item.get("tool_name", "Unknown")] += 1
