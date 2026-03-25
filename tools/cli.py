@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from claude_history.discovery import find_project, find_projects_dir, list_projects
 
-app = typer.Typer(help="Claude Code history analysis tools.")
+app = typer.Typer(help="Claude Code history analysis tools.", context_settings={"help_option_names": ["-h", "--help"]})
 
 # Module-level state set by the callback
 _resolved_dir: Optional[Path] = None
