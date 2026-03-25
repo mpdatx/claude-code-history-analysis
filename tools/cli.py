@@ -461,24 +461,48 @@ def catalog(
 def report(
     output: Optional[Path] = typer.Option(None, help="Save report to file instead of stdout"),
     prompt: bool = typer.Option(True, "--prompt/--no-prompt", help="Wrap data in guideline generation prompt"),
+    generate: bool = typer.Option(False, "--generate", "-g", help="Auto-generate guidelines via claude -p"),
 ):
     """Generate error analysis for LLM-based guideline generation."""
     from tools.report import generate_report
 
     data = generate_report(_resolved_dir, recent_days=_recent_days)
 
-    if prompt:
-        prompt_file = REPO_ROOT / "prompts" / "generate_guidelines.txt"
-        if prompt_file.exists():
-            template = prompt_file.read_text(encoding="utf-8")
-            text = template.replace("{data}", data)
-        else:
-            print(f"Warning: prompt template not found at {prompt_file}", file=sys.stderr)
-            text = data
+    prompt_file = REPO_ROOT / "prompts" / "generate_guidelines.txt"
+    if prompt and prompt_file.exists():
+        template = prompt_file.read_text(encoding="utf-8")
+        text = template.replace("{data}", data)
+    elif prompt:
+        print(f"Warning: prompt template not found at {prompt_file}", file=sys.stderr)
+        text = data
     else:
         text = data
 
-    if output:
+    if generate:
+        import subprocess
+        print("Generating guidelines via claude...", file=sys.stderr)
+        result = subprocess.run(
+            ["claude", "-p", "--no-config"],
+            input=text,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(f"claude exited with code {result.returncode}", file=sys.stderr)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            raise typer.Exit(1)
+        guidelines = result.stdout
+
+        if output:
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            output.write_text(guidelines, encoding="utf-8")
+            print(f"Guidelines saved to: {output.resolve()}", file=sys.stderr)
+        else:
+            sys.stdout.buffer.write(guidelines.encode("utf-8"))
+            if not guidelines.endswith("\n"):
+                sys.stdout.buffer.write(b"\n")
+    elif output:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         output.write_text(text, encoding="utf-8")
         print(f"Report saved to: {output.resolve()}", file=sys.stderr)
