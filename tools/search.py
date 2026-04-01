@@ -47,22 +47,28 @@ def scan_sessions(
     print(f"Scanning {len(history_files)} session files...", file=sys.stderr)
 
     all_sessions = []
-    total_scanned = 0
-    total_projects = set()
+    total_scanned = len(history_files)
+    total_projects = set(f.parent.name for f in history_files)
     total_matches = 0
     matches_by_type = defaultdict(int)
 
-    for i, jsonl_path in enumerate(history_files, 1):
-        if i % 50 == 0:
-            print(f"  {i}/{len(history_files)}...", file=sys.stderr)
+    # Pass 1: fast raw-text filter — single read() per file, skip JSON for non-matches
+    candidate_files = []
+    for jsonl_path in history_files:
+        try:
+            raw = jsonl_path.read_text(encoding="utf-8", errors="ignore")
+            if pattern.search(raw):
+                candidate_files.append(jsonl_path)
+        except OSError:
+            continue
 
-        total_scanned += 1
-        project_name = jsonl_path.parent.name
-        total_projects.add(project_name)
+    print(f"  {len(candidate_files)}/{len(history_files)} files match", file=sys.stderr)
 
+    # Pass 2: full parse only on candidates
+    for jsonl_path in candidate_files:
         session = _scan_one_session(jsonl_path, pattern)
         if session["match_count"] > 0:
-            session["project"] = project_name
+            session["project"] = jsonl_path.parent.name
             all_sessions.append(session)
             total_matches += session["match_count"]
             for ev in session["messages"]:
@@ -83,7 +89,12 @@ def scan_sessions(
 
 
 def _scan_one_session(jsonl_path: Path, pattern: Pattern) -> dict:
-    """Parse a single JSONL file, tagging events that match the pattern."""
+    """Parse a single JSONL file, tagging events that match the pattern.
+
+    Uses a two-pass approach for speed:
+    1. Fast raw-text regex scan to check if the file contains any matches at all
+    2. Full JSON parse only for files that have at least one matching line
+    """
     session = {
         "id": jsonl_path.stem,
         "file": str(jsonl_path),
