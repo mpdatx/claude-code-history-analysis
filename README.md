@@ -28,6 +28,7 @@ claude-history report
 | Command | Description |
 |---------|-------------|
 | `report` | Generate error analysis for LLM-based CLAUDE.md guideline generation |
+| `search <pattern>` | Full-text regex search across all session history |
 | `timeline <project>` | Interactive HTML timeline for a project |
 | `analyze` | Broad pattern analysis — errors, permissions, retries, suboptimal usage |
 | `failures` | Deep tool failure analysis with root cause classification |
@@ -61,6 +62,12 @@ claude-history catalog                        # project dashboard
 # Markdown/terminal output
 claude-history --no-html failures             # markdown report
 claude-history --no-html catalog              # terminal table
+
+# Search across all history
+claude-history search "authentication"            # substring match
+claude-history search "auth(entication|orization)" # regex
+claude-history --project my-proj search "bug"     # within one project
+claude-history --no-html search "error"           # markdown output
 
 # Daily reports
 claude-history daily --date 2026-03-17        # specific date
