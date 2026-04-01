@@ -343,9 +343,9 @@ def generate_html(pattern_str: str, results: dict) -> str:
             prev_time = ev_time
             i += 1
 
-        branch_badge = ""
+        branch_info = ""
         if s["git_branch"]:
-            branch_badge = f'<span class="branch-tag">{html_mod.escape(s["git_branch"])}</span>'
+            branch_info = f'<div class="branch-info"><span class="branch-tag">branch: {html_mod.escape(s["git_branch"])}</span></div>'
 
         error_badge = ""
         if s["tool_errors"] > 0:
@@ -366,7 +366,6 @@ def generate_html(pattern_str: str, results: dict) -> str:
                     <span class="session-date" data-utc="{start_iso}" data-fmt="datetime"></span>
                     <span class="session-duration">{duration}</span>
                     {project_badge}
-                    {branch_badge}
                     {match_badge}
                     {error_badge}
                 </div>
@@ -378,6 +377,7 @@ def generate_html(pattern_str: str, results: dict) -> str:
             </div>
             <div class="session-tools">{tool_tags}</div>
             <div class="session-detail" style="display:none">
+                {branch_info}
                 <div class="session-nav">
                     <button class="match-nav-btn" onclick="event.stopPropagation(); jumpToMatch(this, -1)">&#9650; Prev</button>
                     <button class="match-nav-btn" onclick="event.stopPropagation(); jumpToMatch(this, 1)">&#9660; Next</button>
@@ -442,6 +442,7 @@ def generate_html(pattern_str: str, results: dict) -> str:
     border-radius: 12px; font-size: 12px; color: var(--purple);
 }}
 .tool-tag small {{ color: var(--text2); }}
+.branch-info {{ margin-bottom: 8px; }}
 .branch-tag {{
     background: rgba(56, 139, 253, 0.15); color: var(--accent);
     padding: 2px 8px; border-radius: 12px; font-size: 12px;
