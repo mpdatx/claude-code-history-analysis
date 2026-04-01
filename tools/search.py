@@ -14,10 +14,10 @@ import html as html_mod
 from pathlib import Path
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
-from typing import List, Optional, Pattern
+from typing import Optional, Pattern
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from claude_history.filters import strip_system_tags, extract_user_text
+from claude_history.filters import extract_user_text
 from claude_history.timestamps import parse_timestamp, format_duration
 from claude_history.parsing import find_history_files, iter_jsonl
 
@@ -676,8 +676,9 @@ def generate_markdown(pattern_str: str, results: dict) -> str:
                 continue
             label = ev["type"].upper()
             text = ev.get("text", "")[:200]
-            # Bold the matched spans
-            highlighted = _highlight_markdown(text, ev.get("match_spans", []))
+            # Filter spans to fit truncated text
+            spans = [(s, min(e, 200)) for s, e in ev.get("match_spans", []) if s < 200]
+            highlighted = _highlight_markdown(text, spans)
             lines.append(f"  [{label:12s}] {highlighted}")
 
         lines.append("")
