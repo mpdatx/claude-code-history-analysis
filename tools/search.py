@@ -650,3 +650,50 @@ def _build_heatmap(daily_counts: dict) -> str:
         current += timedelta(days=1)
 
     return f'<div class="heatmap-container"><div class="heatmap">{"".join(cells)}</div></div>'
+
+
+def generate_markdown(pattern_str: str, results: dict) -> str:
+    """Generate markdown search results (terminal output)."""
+    sessions = results["sessions"]
+    stats = results["stats"]
+    total_projects = results["total_projects"]
+
+    sessions = [s for s in sessions if s["start_time"] is not None]
+    sessions.sort(key=lambda s: s["start_time"], reverse=True)
+
+    projects_with_matches = len(set(s["project"] for s in sessions))
+
+    lines = []
+    lines.append(f'## Search: "{pattern_str}" -- {stats["total_matches"]} matches across {len(sessions)} sessions in {projects_with_matches} projects')
+    lines.append("")
+
+    for s in sessions:
+        dt = s["start_time"].strftime("%Y-%m-%d %H:%M")
+        lines.append(f'### Session: {dt} ({s["project"]}) -- {s["match_count"]} matches')
+
+        for ev in s["messages"]:
+            if not ev.get("matched"):
+                continue
+            label = ev["type"].upper()
+            text = ev.get("text", "")[:200]
+            # Bold the matched spans
+            highlighted = _highlight_markdown(text, ev.get("match_spans", []))
+            lines.append(f"  [{label:12s}] {highlighted}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _highlight_markdown(text: str, spans: list) -> str:
+    """Wrap matched spans in **bold** for markdown."""
+    if not spans:
+        return text
+    parts = []
+    prev = 0
+    for start, end in sorted(spans):
+        parts.append(text[prev:start])
+        parts.append(f"**{text[start:end]}**")
+        prev = end
+    parts.append(text[prev:])
+    return "".join(parts)
