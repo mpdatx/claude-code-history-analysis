@@ -8,6 +8,7 @@ Invoked via: python tools/cli.py search <pattern>
 """
 
 import json
+import os
 import re
 import sys
 import html as html_mod
@@ -20,6 +21,105 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from claude_history.filters import extract_user_text
 from claude_history.timestamps import parse_timestamp, format_duration
 from claude_history.parsing import find_history_files, iter_jsonl
+
+
+def _find_rg() -> Optional[str]:
+    """Find ripgrep binary, returning the path or None."""
+    import shutil
+    return shutil.which("rg")
+
+
+def _prefilter_with_rg(rg_path: str, files: list, pattern: Pattern) -> Optional[list]:
+    """Use ripgrep to quickly find files matching the pattern.
+
+    Searches the parent directory with --glob '*.jsonl', then intersects
+    with our file list (which may be filtered by --recent).
+
+    Returns a list of matching Paths, or None if rg fails (caller should fallback).
+    """
+    import subprocess
+
+    # Group files by parent directory to minimize rg invocations
+    dirs = set()
+    for f in files:
+        dirs.add(f.parent)
+    # If files span many subdirectories, search from common ancestor
+    if dirs:
+        common = Path(os.path.commonpath([str(d) for d in dirs]))
+    else:
+        return []
+
+    cmd = [
+        rg_path,
+        "--files-with-matches",
+        "--no-messages",
+        "--ignore-case",
+        "--no-config",
+        "--glob", "*.jsonl",
+        "--",
+        pattern.pattern,
+        str(common),
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+
+    # rg exits 0 = matches found, 1 = no matches, 2+ = error
+    if result.returncode > 1:
+        return None
+
+    if result.returncode == 1:
+        return []
+
+    # Parse matched file paths from stdout
+    rg_matches = set()
+    for line in result.stdout.strip().splitlines():
+        line = line.strip()
+        if line:
+            rg_matches.add(Path(line).resolve())
+
+    # Intersect with our file list (respects --recent filtering)
+    file_set = {f.resolve(): f for f in files}
+    return [file_set[p] for p in rg_matches if p in file_set]
+
+
+def _prefilter_with_python(files: list, pattern: Pattern) -> list:
+    """Fallback pre-filter: read each file and regex-test raw text."""
+    candidate_files = []
+    total = len(files)
+    for i, jsonl_path in enumerate(files, 1):
+        if i % 100 == 0:
+            print(f"  checked {i}/{total} files...", file=sys.stderr)
+        try:
+            raw = jsonl_path.read_text(encoding="utf-8", errors="ignore")
+            if pattern.search(raw):
+                candidate_files.append(jsonl_path)
+        except OSError:
+            continue
+    return candidate_files
+
+
+def _prefilter_files(files: list, pattern: Pattern) -> list:
+    """Pre-filter JSONL files to find those containing pattern matches.
+
+    Uses ripgrep if available (much faster), falls back to Python.
+    """
+    rg_path = _find_rg()
+    if rg_path:
+        print(f"  using ripgrep for pre-filter...", file=sys.stderr)
+        result = _prefilter_with_rg(rg_path, files, pattern)
+        if result is not None:
+            return result
+        print(f"  ripgrep failed, falling back to Python...", file=sys.stderr)
+
+    return _prefilter_with_python(files, pattern)
 
 
 def scan_sessions(
@@ -52,16 +152,8 @@ def scan_sessions(
     total_matches = 0
     matches_by_type = defaultdict(int)
 
-    # Pass 1: fast raw-text filter — single read() per file, skip JSON for non-matches
-    candidate_files = []
-    for jsonl_path in history_files:
-        try:
-            raw = jsonl_path.read_text(encoding="utf-8", errors="ignore")
-            if pattern.search(raw):
-                candidate_files.append(jsonl_path)
-        except OSError:
-            continue
-
+    # Pass 1: fast pre-filter to find files containing the pattern
+    candidate_files = _prefilter_files(history_files, pattern)
     print(f"  {len(candidate_files)}/{len(history_files)} files match", file=sys.stderr)
 
     # Pass 2: full parse only on candidates
