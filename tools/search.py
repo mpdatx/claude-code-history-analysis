@@ -122,12 +122,20 @@ def _prefilter_files(files: list, pattern: Pattern) -> list:
     return _prefilter_with_python(files, pattern)
 
 
+_ALL_SCOPES = {"user", "claude", "tools"}
+
+
 def scan_sessions(
     projects_dir: Path,
     pattern: Pattern,
     recent_days: Optional[int] = None,
+    scope: Optional[set] = None,
 ) -> dict:
     """Scan JSONL files and return sessions with regex matches.
+
+    Args:
+        scope: set of content types to search. Any combo of "user", "claude", "tools".
+               Defaults to all three if None.
 
     Returns a dict with:
         sessions: list of session dicts (only those with matches)
@@ -135,6 +143,8 @@ def scan_sessions(
         total_projects: set of all project names scanned
         stats: {total_matches, matches_by_type: {user, assistant, tool_use, tool_result}}
     """
+    if scope is None:
+        scope = _ALL_SCOPES
     history_files = find_history_files(projects_dir, recent_days=recent_days)
     if not history_files:
         return {
@@ -158,7 +168,7 @@ def scan_sessions(
 
     # Pass 2: full parse only on candidates
     for jsonl_path in candidate_files:
-        session = _scan_one_session(jsonl_path, pattern)
+        session = _scan_one_session(jsonl_path, pattern, scope)
         if session["match_count"] > 0:
             session["project"] = jsonl_path.parent.name
             all_sessions.append(session)
@@ -180,12 +190,13 @@ def scan_sessions(
     }
 
 
-def _scan_one_session(jsonl_path: Path, pattern: Pattern) -> dict:
+def _scan_one_session(jsonl_path: Path, pattern: Pattern, scope: set) -> dict:
     """Parse a single JSONL file, tagging events that match the pattern.
 
-    Uses a two-pass approach for speed:
-    1. Fast raw-text regex scan to check if the file contains any matches at all
-    2. Full JSON parse only for files that have at least one matching line
+    scope controls which content types are searched:
+        "user"   — user text messages
+        "claude" — assistant text messages
+        "tools"  — tool_use inputs and tool_result outputs
     """
     session = {
         "id": jsonl_path.stem,
@@ -241,10 +252,9 @@ def _scan_one_session(jsonl_path: Path, pattern: Pattern) -> dict:
                         tool_name = tool_id_to_name.get(tool_use_id, "Unknown")
                         if item.get("is_error"):
                             session["tool_errors"] += 1
-                        # Search tool result content
                         result_text = str(item.get("content", ""))
                         display_text = f"{tool_name}: {result_text[:300]}"
-                        display_spans = _find_matches(pattern, display_text)
+                        display_spans = _find_matches(pattern, display_text) if "tools" in scope else []
                         ev = {
                             "time": ts,
                             "type": "tool_result",
@@ -263,7 +273,7 @@ def _scan_one_session(jsonl_path: Path, pattern: Pattern) -> dict:
                 session["user_messages"] += 1
                 text = extract_user_text(content)
                 if text:
-                    spans = _find_matches(pattern, text)
+                    spans = _find_matches(pattern, text) if "user" in scope else []
                     ev = {
                         "time": ts,
                         "type": "user",
@@ -282,10 +292,9 @@ def _scan_one_session(jsonl_path: Path, pattern: Pattern) -> dict:
                         tname = item.get("name", "unknown")
                         session["tools_used"][tname] += 1
                         tool_id_to_name[item.get("id", "")] = tname
-                        # Search tool name + input
                         tool_input = json.dumps(item.get("input", {}), default=str)
                         display_text = f"{tname}: {tool_input[:300]}"
-                        spans = _find_matches(pattern, display_text)
+                        spans = _find_matches(pattern, display_text) if "tools" in scope else []
                         ev = {
                             "time": ts,
                             "type": "tool_use",
@@ -299,7 +308,7 @@ def _scan_one_session(jsonl_path: Path, pattern: Pattern) -> dict:
 
                     elif item.get("type") == "text" and item.get("text", "").strip():
                         text = item["text"][:200]
-                        spans = _find_matches(pattern, text)
+                        spans = _find_matches(pattern, text) if "claude" in scope else []
                         ev = {
                             "time": ts,
                             "type": "assistant",

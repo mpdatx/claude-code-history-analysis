@@ -236,6 +236,60 @@ def main(
         raise typer.Exit()
 
 
+SEARCH_SCOPES = ("user", "claude", "tools")
+
+
+@app.command()
+def search(
+    pattern: str = typer.Argument(..., help="Regex search pattern (case-insensitive)"),
+    scope: Optional[str] = typer.Option(
+        "user,claude",
+        help="Where to search: any combo of user,claude,tools (default: user,claude)",
+    ),
+    output: Optional[Path] = typer.Option(None, help="Output file path"),
+):
+    """Full-text regex search across session history."""
+    import re as re_mod
+    from tools.search import scan_sessions, generate_html, generate_markdown
+
+    # Parse scope
+    scope_parts = set(s.strip().lower() for s in scope.split(","))
+    invalid = scope_parts - set(SEARCH_SCOPES)
+    if invalid:
+        typer.echo(f"Invalid scope: {', '.join(invalid)}. Valid: {', '.join(SEARCH_SCOPES)}", err=True)
+        raise typer.Exit(1)
+
+    try:
+        compiled = re_mod.compile(pattern, re_mod.IGNORECASE)
+    except re_mod.error as e:
+        typer.echo(f"Invalid regex pattern: {e}", err=True)
+        raise typer.Exit(1)
+
+    results = scan_sessions(_resolved_dir, compiled, recent_days=_recent_days, scope=scope_parts)
+
+    if not results["sessions"]:
+        typer.echo("No matches found.", err=True)
+        raise typer.Exit(0)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Sanitize pattern for filename
+    safe = re_mod.sub(r'[^a-zA-Z0-9]', '_', pattern)[:50].strip('_')
+
+    if _html_output:
+        output_file = output or (OUTPUT_DIR / f"search_{safe}.html")
+        html_content = generate_html(pattern, results)
+        output_file.write_text(html_content, encoding="utf-8")
+        resolved = output_file.resolve()
+        print(f"Search results: {resolved}")
+        _offer_open_in_browser(resolved)
+    else:
+        output_file = output or (OUTPUT_DIR / f"search_{safe}.md")
+        md_content = generate_markdown(pattern, results)
+        output_file.write_text(md_content, encoding="utf-8")
+        print(f"Search results: {output_file}")
+
+
 @app.command()
 def timeline(
     project_name: Optional[str] = typer.Argument(None, help="Project name (positional shorthand)"),
@@ -509,46 +563,6 @@ def report(
     else:
         sys.stdout.buffer.write(text.encode("utf-8"))
         sys.stdout.buffer.write(b"\n")
-
-
-@app.command()
-def search(
-    pattern: str = typer.Argument(..., help="Regex search pattern (case-insensitive)"),
-    output: Optional[Path] = typer.Option(None, help="Output file path"),
-):
-    """Full-text regex search across session history."""
-    import re as re_mod
-    from tools.search import scan_sessions, generate_html, generate_markdown
-
-    try:
-        compiled = re_mod.compile(pattern, re_mod.IGNORECASE)
-    except re_mod.error as e:
-        typer.echo(f"Invalid regex pattern: {e}", err=True)
-        raise typer.Exit(1)
-
-    results = scan_sessions(_resolved_dir, compiled, recent_days=_recent_days)
-
-    if not results["sessions"]:
-        typer.echo("No matches found.", err=True)
-        raise typer.Exit(0)
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Sanitize pattern for filename
-    safe = re_mod.sub(r'[^a-zA-Z0-9]', '_', pattern)[:50].strip('_')
-
-    if _html_output:
-        output_file = output or (OUTPUT_DIR / f"search_{safe}.html")
-        html_content = generate_html(pattern, results)
-        output_file.write_text(html_content, encoding="utf-8")
-        resolved = output_file.resolve()
-        print(f"Search results: {resolved}")
-        _offer_open_in_browser(resolved)
-    else:
-        output_file = output or (OUTPUT_DIR / f"search_{safe}.md")
-        md_content = generate_markdown(pattern, results)
-        output_file.write_text(md_content, encoding="utf-8")
-        print(f"Search results: {output_file}")
 
 
 if __name__ == "__main__":
